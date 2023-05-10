@@ -28,12 +28,22 @@ import net.minecraft.loot.function.ConditionalLootFunction;
 import net.minecraft.loot.function.LootFunction;
 import net.minecraft.loot.function.LootFunctionType;
 import net.minecraft.loot.provider.number.LootNumberProvider;
+import net.minecraft.registry.BuiltinRegistries;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.world.World;
+import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.BiomeKeys;
+import net.minecraft.world.biome.GenerationSettings;
+import net.minecraft.world.gen.feature.*;
+import net.minecraft.world.gen.placementmodifier.PlacementModifier;
+import net.minecraft.world.gen.placementmodifier.PlacementModifierType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -44,6 +54,7 @@ public class LootTableParser {
     private static final Map<Identifier, BlockLootTableSender> blockSenders = new HashMap<>();
     private static final Map<Identifier, MobLootTableSender> mobSenders = new HashMap<>();
     private static final Map<Identifier, GameplayLootTableSender> gameplaySenders = new HashMap<>();
+    private static final Map<Identifier, WorldGenLootSender> worldGenSenders = new HashMap<>();
     public static final Object2BooleanMap<PostProcessor> postProcessors;
     private static Map<Identifier, LootTable> tables = new HashMap<>();
     public static LootConditionManager conditionManager;
@@ -84,6 +95,8 @@ public class LootTableParser {
                 mobSenders.forEach((id,mobSender) -> mobSender.send(handler.player));
             if (EMILoot.config.parseGameplayLoot)
                 gameplaySenders.forEach((id,gameplaySender) -> gameplaySender.send(handler.player));
+            if (EMILoot.config.parseWorldGen)
+                worldGenSenders.forEach((id, worldGenSender) -> worldGenSender.send(handler.player));
 
         });
     }
@@ -299,6 +312,13 @@ public class LootTableParser {
             }
             sender.addBuilder(builder);
         }
+        return sender;
+    }
+
+    private static WorldGenLootSender parseWorldGenLoot(Identifier id) {
+        WorldGenLootSender sender = new WorldGenLootSender(id);
+
+
         return sender;
     }
 

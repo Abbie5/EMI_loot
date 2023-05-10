@@ -1,10 +1,7 @@
 package fzzyhmstrs.emi_loot.util;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import dev.emi.emi.EmiPort;
-import dev.emi.emi.EmiUtil;
 import dev.emi.emi.api.stack.EmiStack;
-import dev.emi.emi.screen.tooltip.RemainderTooltipComponent;
 import fzzyhmstrs.emi_loot.client.ClientResourceData;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
@@ -112,19 +109,19 @@ public class EntityEmiStack extends EmiStack {
     public List<TooltipComponent> getTooltip() {
         List<TooltipComponent> list = new ArrayList<>();
         if (entity != null) {
-            list.addAll(getTooltipText().stream().map(EmiPort::ordered).map(TooltipComponent::of).toList());
-            String mod = EmiUtil.getModName(Registries.ENTITY_TYPE.getId(entity.getType()).getNamespace());
-            list.add(TooltipComponent.of(EmiPort.ordered(EmiPort.literal(mod, Formatting.BLUE, Formatting.ITALIC))));
-            if (!getRemainder().isEmpty()) {
-                list.add(new RemainderTooltipComponent(this));
-            }
+            list.addAll(getTooltipText().stream().map(Text::asOrderedText).map(TooltipComponent::of).toList());
+//            String mod = EmiUtil.getModName(Registries.ENTITY_TYPE.getId(entity.getType()).getNamespace());
+//            list.add(TooltipComponent.of(EmiPort.ordered(EmiPort.literal(mod, Formatting.BLUE, Formatting.ITALIC))));
+//            if (!getRemainder().isEmpty()) {
+//                list.add(new RemainderTooltipComponent(this));
+//            }
         }
         return list;
     }
 
     @Override
     public Text getName() {
-        return entity != null ? entity.getName() : EmiPort.literal("yet another missingno");
+        return entity != null ? entity.getName() : Text.literal("yet another missingno");
     }
 
     public static void renderEntity(int x, int y, EntityRenderContext ctx, LivingEntity entity) {

@@ -11,6 +11,7 @@ import static fzzyhmstrs.emi_loot.server.BlockLootTableSender.BLOCK_SENDER;
 import static fzzyhmstrs.emi_loot.server.ChestLootTableSender.CHEST_SENDER;
 import static fzzyhmstrs.emi_loot.server.GameplayLootTableSender.GAMEPLAY_SENDER;
 import static fzzyhmstrs.emi_loot.server.MobLootTableSender.MOB_SENDER;
+import static fzzyhmstrs.emi_loot.server.WorldGenLootSender.WORLDGEN_SENDER;
 
 public class ClientLootTables {
     private final List<LootReceiver> loots = new LinkedList<>();
@@ -45,6 +46,12 @@ public class ClientLootTables {
             LootReceiver table = ClientGameplayLootTable.INSTANCE.fromBuf(buf);
             loots.add(table);
             if (EMILoot.DEBUG) EMILoot.LOGGER.info("received gameplay loot: " + table.getId());
+        });
+
+        ClientPlayNetworking.registerGlobalReceiver(WORLDGEN_SENDER,(minecraftClient, playNetworkHandler, buf, sender)-> {
+            LootReceiver table = ClientWorldGenLootTable.INSTANCE.fromBuf(buf);
+            loots.add(table);
+            if (EMILoot.DEBUG) EMILoot.LOGGER.info("received worldgen " + table.getId());
         });
     }
 

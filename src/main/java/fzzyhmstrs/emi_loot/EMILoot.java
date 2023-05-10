@@ -2,6 +2,7 @@ package fzzyhmstrs.emi_loot;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import fzzyhmstrs.emi_loot.eventhandlers.WorldGenThingy;
 import fzzyhmstrs.emi_loot.parser.LootTableParser;
 import fzzyhmstrs.emi_loot.server.condition.BlownUpByCreeperLootCondition;
 import fzzyhmstrs.emi_loot.server.condition.KilledByWitherLootCondition;
@@ -9,6 +10,7 @@ import fzzyhmstrs.emi_loot.server.condition.MobSpawnedWithLootCondition;
 import fzzyhmstrs.emi_loot.server.function.OminousBannerLootFunction;
 import fzzyhmstrs.emi_loot.server.function.SetAnyDamageLootFunction;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.registry.DynamicRegistrySetupCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentTarget;
@@ -19,6 +21,7 @@ import net.minecraft.loot.function.LootFunctionType;
 import net.minecraft.loot.function.LootFunctionTypes;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.random.LocalRandom;
 import net.minecraft.util.math.random.Random;
@@ -34,7 +37,7 @@ import java.util.Arrays;
 public class EMILoot implements ModInitializer {
 
     public static String MOD_ID = "emi_loot";
-    public static final Logger LOGGER = LoggerFactory.getLogger("emi_loot");
+    public static final Logger LOGGER = LoggerFactory.getLogger("EMI Loot");
     public static Random emiLootRandom = new LocalRandom(System.currentTimeMillis());
     public static LootTableParser parser = new LootTableParser();
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -63,6 +66,7 @@ public class EMILoot implements ModInitializer {
     public void onInitialize() {
         parser.registerServer();
         Registry.register(Registries.ENCHANTMENT,new Identifier(MOD_ID,"random"),RANDOM);
+        DynamicRegistrySetupCallback.EVENT.register((view -> view.registerEntryAdded(RegistryKeys.PLACED_FEATURE, WorldGenThingy.INSTANCE)));
     }
     
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -130,6 +134,7 @@ public class EMILoot implements ModInitializer {
         public boolean parseMobLoot = true;
     
         public boolean parseGameplayLoot = true;
+        public boolean parseWorldGen = true;
 
         public boolean chestLootCompact = true;
 
