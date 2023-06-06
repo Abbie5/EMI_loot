@@ -4,12 +4,9 @@ import com.google.common.collect.Sets;
 import fzzyhmstrs.emi_loot.EMILoot;
 import fzzyhmstrs.emi_loot.mixins.*;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext;
-import net.fabricmc.fabric.api.event.registry.RegistryEntryAddedCallback;
+import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.*;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.registry.tag.TagKey;
@@ -21,6 +18,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.intprovider.IntProvider;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.dimension.DimensionOptions;
+import net.minecraft.world.gen.HeightContext;
 import net.minecraft.world.gen.feature.ConfiguredFeature;
 import net.minecraft.world.gen.feature.FeatureConfig;
 import net.minecraft.world.gen.feature.OreFeatureConfig;
@@ -32,60 +30,18 @@ import net.minecraft.world.gen.placementmodifier.CountPlacementModifier;
 import net.minecraft.world.gen.placementmodifier.HeightRangePlacementModifier;
 import net.minecraft.world.gen.placementmodifier.PlacementModifier;
 import net.minecraft.world.gen.structure.Structure;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
 
-public class WorldGenThingy implements RegistryEntryAddedCallback<PlacedFeature> {
+public class WorldGenThingy {
     public static final WorldGenThingy INSTANCE = new WorldGenThingy();
 
     private WorldGenThingy() {
     }
 
-    @Override
     public void onEntryAdded(int rawId, Identifier id, PlacedFeature placedFeature) {
-        FeatureConfig config = placedFeature.feature().value().config();
-        if (config instanceof OreFeatureConfig ore) {
-            EMILoot.LOGGER.info("placed feature: " + id.toString());
-
-            Optional<RegistryKey<ConfiguredFeature<?, ?>>> thing = placedFeature.feature().getKey();
-            EMILoot.LOGGER.info("config id: " + (thing.isPresent() ? thing.get().getValue().toString() : "none"));
-
-            for (PlacementModifier modifier : placedFeature.placementModifiers()) {
-                if (modifier instanceof HeightRangePlacementModifier heightRange) {
-                    HeightProvider height = ((HeightRangePlacementModifierAccessor) heightRange).getHeightProvider();
-                    if (height instanceof TrapezoidHeightProvider trapezoid) {
-                        var accessor = (TrapezoidHeightProviderAccessor) trapezoid;
-                        EMILoot.LOGGER.info("trapezoid " + accessor.getMinOffset() + ", " + accessor.getPlateau() + ", " + accessor.getMaxOffset());
-
-                    } else if (height instanceof UniformHeightProvider uniform) {
-                        var accessor = (UniformHeightProviderAccessor) uniform;
-                        EMILoot.LOGGER.info("uniform " + accessor.getMinOffset() + ", " + accessor.getMaxOffset());
-                    }
-                } else if (modifier instanceof CountPlacementModifier countPlacementModifier) {
-                    IntProvider countProvider = ((CountPlacementModifierAccessor) countPlacementModifier).getCount();
-                    EMILoot.LOGGER.info(countProvider.getMin() + " <= count <= " + countProvider.getMax());
-                }
-            }
-
-
-            for (OreFeatureConfig.Target target : ore.targets) {
-                Block oreBlock = target.state.getBlock();
-                EMILoot.LOGGER.info("ore: " + oreBlock.toString());
-                RuleTest ruleTest = target.target;
-                if (ruleTest instanceof AlwaysTrueRuleTest) {
-                    EMILoot.LOGGER.info("replaces all");
-                } else if (ruleTest instanceof TagMatchRuleTest tagMatchRuleTest) {
-                    EMILoot.LOGGER.info("replaces all in tag: " + ((TagMatchRuleTestAccessor) tagMatchRuleTest).getTag());
-                } else if (ruleTest instanceof BlockMatchRuleTest blockMatchRuleTest) {
-                    EMILoot.LOGGER.info("replaces: " + ((BlockMatchRuleTestAccessor) blockMatchRuleTest).getBlock());
-                }
-            }
-
-            EMILoot.LOGGER.info("reduced air exposure: " + ore.discardOnAirChance);
-
-            EMILoot.LOGGER.info("\n\n");
-        }
     }
 
     // copied from fabric api to prevent incompatibilities with quilted fabric api
@@ -164,8 +120,8 @@ public class WorldGenThingy implements RegistryEntryAddedCallback<PlacedFeature>
         }
     }
 
-    private static void logBiomes(Identifier placedFeatureId, Collection<Identifier> biomeSet) {
-        EMILoot.LOGGER.info(placedFeatureId + " generates in biomes: ");
+    private static void logBiomes(Collection<Identifier> biomeSet) {
+        EMILoot.LOGGER.info("generates in biomes: ");
         for (var biomeId : biomeSet) {
             EMILoot.LOGGER.info("- " + biomeId);
         }
@@ -208,14 +164,56 @@ public class WorldGenThingy implements RegistryEntryAddedCallback<PlacedFeature>
         for (var entry : map.entrySet()) {
             var placedFeature = entry.getKey();
             var placedFeatureId = manager.get(RegistryKeys.PLACED_FEATURE).getId(placedFeature);
+            var placedFeatureRawId = manager.get(RegistryKeys.PLACED_FEATURE).getRawId(placedFeature);
             var biomeSet = entry.getValue();
             boolean justListBiomes = true;
+
+            EMILoot.LOGGER.info("placed feature: " + placedFeatureId);
+
+            Optional<RegistryKey<ConfiguredFeature<?, ?>>> thing = placedFeature.feature().getKey();
+            EMILoot.LOGGER.info("config id: " + (thing.isPresent() ? thing.get().getValue().toString() : "none"));
+
+            for (PlacementModifier modifier : placedFeature.placementModifiers()) {
+                if (modifier instanceof HeightRangePlacementModifier heightRange) {
+                    HeightProvider height = ((HeightRangePlacementModifierAccessor) heightRange).getHeightProvider();
+                    if (height instanceof TrapezoidHeightProvider trapezoid) {
+                        var accessor = (TrapezoidHeightProviderAccessor) trapezoid;
+                        EMILoot.LOGGER.info("trapezoid " + accessor.getMinOffset() + ", " + accessor.getPlateau() + ", " + accessor.getMaxOffset());
+
+                    } else if (height instanceof UniformHeightProvider uniform) {
+                        var accessor = (UniformHeightProviderAccessor) uniform;
+                        EMILoot.LOGGER.info("uniform " + accessor.getMinOffset() + ", " + accessor.getMaxOffset());
+                    }
+                } else if (modifier instanceof CountPlacementModifier countPlacementModifier) {
+                    IntProvider countProvider = ((CountPlacementModifierAccessor) countPlacementModifier).getCount();
+                    EMILoot.LOGGER.info(countProvider.getMin() + " <= count <= " + countProvider.getMax());
+                }
+            }
+
+            var ore = (OreFeatureConfig) placedFeature.feature().value().config();
+
+            for (OreFeatureConfig.Target target : ore.targets) {
+                Block oreBlock = target.state.getBlock();
+                EMILoot.LOGGER.info("ore: " + oreBlock.toString());
+                RuleTest ruleTest = target.target;
+                if (ruleTest instanceof AlwaysTrueRuleTest) {
+                    EMILoot.LOGGER.info("replaces all");
+                } else if (ruleTest instanceof TagMatchRuleTest tagMatchRuleTest) {
+                    EMILoot.LOGGER.info("replaces all in tag: " + ((TagMatchRuleTestAccessor) tagMatchRuleTest).getTag());
+                } else if (ruleTest instanceof BlockMatchRuleTest blockMatchRuleTest) {
+                    EMILoot.LOGGER.info("replaces: " + ((BlockMatchRuleTestAccessor) blockMatchRuleTest).getBlock());
+                }
+            }
+
+            EMILoot.LOGGER.info("reduced air exposure: " + ore.discardOnAirChance);
+
+
             for (var entryAgain : biomesGeneratesInDimensions.entrySet()) {
                 var dimensionBiomeSet = entryAgain.getValue();
                 var dimensionId = entryAgain.getKey();
                 if (dimensionBiomeSet.equals(biomeSet)) {
                     // dont need to store whole list
-                    EMILoot.LOGGER.info(placedFeatureId + " generates in " + dimensionId);
+                    EMILoot.LOGGER.info("generates in " + dimensionId);
                     justListBiomes = false;
                 } else if (dimensionBiomeSet.containsAll(biomeSet)) {
                     // subset of dimension biomes
@@ -223,9 +221,9 @@ public class WorldGenThingy implements RegistryEntryAddedCallback<PlacedFeature>
                     if (difference.size() > biomeSet.size()) {
                         // only useful if the resulting set of biomes the ore doesnt generate in
                         // is smaller than the set of biomes that it does generate in
-                        logBiomes(placedFeatureId, biomeSet);
+                        logBiomes(biomeSet);
                     } else {
-                        EMILoot.LOGGER.info(placedFeatureId + " generates in " + dimensionId + " biomes except: ");
+                        EMILoot.LOGGER.info("generates in " + dimensionId + " biomes except: ");
                         for (var biomeId : difference) {
                             EMILoot.LOGGER.info("- " + biomeId);
                         }
@@ -235,14 +233,79 @@ public class WorldGenThingy implements RegistryEntryAddedCallback<PlacedFeature>
             }
 
             if (justListBiomes) {
-                logBiomes(placedFeatureId, biomeSet);
+                logBiomes(biomeSet);
             }
+            EMILoot.LOGGER.info("\n\n");
+
         }
 
         EMILoot.LOGGER.info("done!");
     }
 
-    public static class BiomeInfo {
-
-    }
+//    public record PlacedFeatureInfo(
+//            int rawId, // PlacedFeature
+//            int configuredFeatureRawId, // FeatureConfig
+//            int minCount,
+//            int maxCount,
+//            int size,
+//            float discardOnAirChance,
+//            int minY,
+//            int maxY,
+//            int plateau, // 0 for triangle, (maxY-minY) for uniform
+//            int dimensionRawId, // only set to dimension id if excluding biomes from that dimension, otherwise set to -1
+//            List<Integer> oreRawIds, // Block
+//            List<Integer> biomeRawIds // Biome
+//    ) {
+//        public static PlacedFeatureInfo of(DynamicRegistryManager manager, PlacedFeature placedFeature, @Nullable DimensionOptions dimension, boolean exclude, List<Biome> biomes, HeightContext heightContext) {
+//            int rawId = manager.get(RegistryKeys.PLACED_FEATURE).getRawId(placedFeature);
+//            int configuredFeatureRawId = manager.get(RegistryKeys.CONFIGURED_FEATURE).getRawId(placedFeature.feature().value());
+//            OreFeatureConfig ore = (OreFeatureConfig) placedFeature.feature().value().config();
+//
+//            float discardOnAirChance = ore.discardOnAirChance;
+//            int size = ore.size;
+//
+//            int minCount = 0;
+//            int maxCount = 0;
+//            int minY = 0;
+//            int maxY = 0;
+//            int plateau = 0;
+//            for (PlacementModifier modifier : placedFeature.placementModifiers()) {
+//                if (modifier instanceof CountPlacementModifier count) {
+//                    IntProvider intProvider = ((CountPlacementModifierAccessor) count).getCount();
+//                    minCount = intProvider.getMin();
+//                    maxCount = intProvider.getMax();
+//                } else if (modifier instanceof HeightRangePlacementModifier heightRange) {
+//                    HeightProvider height = ((HeightRangePlacementModifierAccessor) heightRange).getHeightProvider();
+//                    if (height instanceof TrapezoidHeightProvider trapezoid) {
+//                        var accessor = (TrapezoidHeightProviderAccessor) trapezoid;
+//                        plateau = accessor.getPlateau();
+//                        minY = accessor.getMinOffset().getY(heightContext);
+//                        maxY = accessor.getMaxOffset().getY(heightContext);
+//                    } else if (height instanceof UniformHeightProvider uniform) {
+//                        var accessor = (UniformHeightProviderAccessor) uniform;
+//                        minY = accessor.getMinOffset().getY(heightContext);
+//                        maxY = accessor.getMaxOffset().getY(heightContext);
+//                        plateau = maxY - minY;
+//                    }
+//                }
+//            }
+//
+//            int dimensionRawId = exclude ? manager.get(RegistryKeys.DIMENSION).getRawId(dimension) : -1;
+//
+//            Registry<Biome> biomeRegistry = manager.get(RegistryKeys.BIOME);
+//            List<Integer> biomeRawIds = biomes
+//                    .stream()
+//                    .map(biomeRegistry::getRawId)
+//                    .toList();
+//
+//            List<Integer> oreRawIds = ore.targets
+//                    .stream()
+//                    .map(t -> t.state)
+//                    .map(AbstractBlock.AbstractBlockState::getBlock)
+//                    .map(Registries.BLOCK::getRawId)
+//                    .toList();
+//
+//            return new PlacedFeatureInfo(rawId, configuredFeatureRawId, minCount, maxCount, size, discardOnAirChance, minY, maxY, plateau, dimensionRawId, oreRawIds, biomeRawIds);
+//        }
+//    }
 }

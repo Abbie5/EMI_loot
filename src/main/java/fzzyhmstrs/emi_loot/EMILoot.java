@@ -66,7 +66,7 @@ public class EMILoot implements ModInitializer {
     public void onInitialize() {
         parser.registerServer();
         Registry.register(Registries.ENCHANTMENT,new Identifier(MOD_ID,"random"),RANDOM);
-        DynamicRegistrySetupCallback.EVENT.register((view -> view.registerEntryAdded(RegistryKeys.PLACED_FEATURE, WorldGenThingy.INSTANCE)));
+//        DynamicRegistrySetupCallback.EVENT.register((view -> view.registerEntryAdded(RegistryKeys.PLACED_FEATURE, WorldGenThingy.INSTANCE)));
     }
     
     @SuppressWarnings("ResultOfMethodCallIgnored")
